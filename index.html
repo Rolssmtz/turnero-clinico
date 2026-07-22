@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Turnero Clínico — gestión de fichas y llamado de pacientes por consultorio, en tiempo real.">
+  <title>Turnero Clínico</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="styles.css?v=1">
+  <!-- Supabase JS SDK (build UMD, sin bundler) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+</head>
+<body>
+
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- ========================================== -->
+  <!-- LOADING (mientras se resuelve la sesión)    -->
+  <!-- ========================================== -->
+  <section id="view-loading" class="app-view active">
+    <div class="loading-screen">
+      <div class="spinner"></div>
+      <p>Cargando…</p>
+    </div>
+  </section>
+
+  <!-- ========================================== -->
+  <!-- VIEW: ACCESO ADMIN (login / registro)       -->
+  <!-- ========================================== -->
+  <section id="view-access" class="app-view">
+    <div class="card access-card">
+      <div class="access-brand">
+        <h1>Turnero Clínico</h1>
+        <p>Panel de administración</p>
+      </div>
+
+      <div class="tabs">
+        <button type="button" id="tab-login" class="active">Iniciar sesión</button>
+        <button type="button" id="tab-register">Crear cuenta</button>
+      </div>
+
+      <form id="form-login">
+        <div class="field">
+          <label for="login-email">Correo electrónico</label>
+          <input type="email" id="login-email" required autocomplete="username">
+        </div>
+        <div class="field">
+          <label for="login-password">Contraseña</label>
+          <input type="password" id="login-password" required autocomplete="current-password">
+        </div>
+        <p id="login-error" class="field-error" style="display:none;"></p>
+        <button type="submit" class="btn btn-primary btn-block">Entrar</button>
+      </form>
+
+      <form id="form-register" style="display:none;">
+        <div class="field">
+          <label for="register-email">Correo electrónico</label>
+          <input type="email" id="register-email" required autocomplete="username">
+        </div>
+        <div class="field">
+          <label for="register-password">Contraseña</label>
+          <input type="password" id="register-password" required minlength="6" autocomplete="new-password">
+        </div>
+        <div class="field">
+          <label for="register-clinic">Nombre de la clínica (opcional)</label>
+          <input type="text" id="register-clinic" autocomplete="organization">
+        </div>
+        <p id="register-error" class="field-error" style="display:none;"></p>
+        <button type="submit" class="btn btn-primary btn-block">Crear cuenta de administrador</button>
+      </form>
+    </div>
+  </section>
+
+  <!-- ========================================== -->
+  <!-- VIEW: ADMIN DASHBOARD                       -->
+  <!-- ========================================== -->
+  <section id="view-admin" class="app-view">
+    <header class="topbar">
+      <div class="brand"><span class="dot"></span> Turnero Clínico</div>
+      <button type="button" id="btn-logout" class="btn btn-secondary btn-sm">Cerrar sesión</button>
+    </header>
+
+    <main class="page">
+      <div class="tab-nav">
+        <button type="button" class="admin-tab-btn active" data-tab="vistas">Vistas y jornada</button>
+        <button type="button" class="admin-tab-btn" data-tab="fichas">Repartir fichas</button>
+      </div>
+
+      <!-- TAB: Vistas / compartir / jornada -->
+      <div id="admin-tab-vistas" class="admin-tab-panel active">
+        <div class="card">
+          <div class="card-title">Vistas del sistema</div>
+          <div class="card-subtitle">Comparte el link de cada vista por WhatsApp o correo con el área correspondiente.</div>
+          <div id="link-list" class="link-list"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Almacenar jornada</div>
+          <div class="card-subtitle">Envía por correo una copia (CSV) de todos los registros del día, con fecha y hora.</div>
+          <div class="jornada-box">
+            <div class="jornada-row">
+              <div class="field">
+                <label for="jornada-email">Correo electrónico destino</label>
+                <input type="email" id="jornada-email" placeholder="correo@ejemplo.com">
+              </div>
+              <button type="button" id="btn-almacenar-jornada" class="btn btn-primary">Almacenar jornada</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Iniciar jornada</div>
+          <div class="card-subtitle">Elimina todos los registros de pacientes del día. Esta acción no se puede deshacer.</div>
+          <button type="button" id="btn-iniciar-jornada" class="btn btn-danger">Iniciar jornada</button>
+        </div>
+      </div>
+
+      <!-- TAB: Repartir fichas -->
+      <div id="admin-tab-fichas" class="admin-tab-panel">
+        <div class="card">
+          <div class="card-title">Repartir ficha</div>
+          <div class="card-subtitle">Registra al paciente y asígnalo a un consultorio.</div>
+          <form id="form-ficha">
+            <div class="field">
+              <label for="ficha-nombre">Nombre completo del paciente</label>
+              <input type="text" id="ficha-nombre" required>
+            </div>
+            <div class="field">
+              <label for="ficha-expediente">Número de expediente</label>
+              <input type="text" id="ficha-expediente" required>
+            </div>
+            <div class="field">
+              <label for="ficha-numero">Número de ficha</label>
+              <input type="text" id="ficha-numero" required>
+            </div>
+            <div class="field">
+              <label for="ficha-consultorio">Consultorio</label>
+              <select id="ficha-consultorio" required>
+                <option value="consultorio_1">Consultorio 1</option>
+                <option value="consultorio_2">Consultorio 2</option>
+                <option value="consultorio_3">Consultorio 3</option>
+                <option value="consultorio_dental">Consultorio Dental</option>
+              </select>
+            </div>
+            <p id="ficha-error" class="field-error" style="display:none;"></p>
+            <button type="submit" class="btn btn-primary btn-block">Guardar</button>
+          </form>
+        </div>
+      </div>
+    </main>
+  </section>
+
+  <!-- ========================================== -->
+  <!-- VIEW: ARCHIVISTA                            -->
+  <!-- ========================================== -->
+  <section id="view-archivista" class="app-view">
+    <header class="topbar">
+      <div class="brand"><span class="dot"></span> Turnero Clínico</div>
+      <span class="view-badge">Archivista</span>
+    </header>
+    <main class="page">
+      <div class="card">
+        <div class="card-title">Fichas del día</div>
+        <div class="card-subtitle">Marca cada registro conforme se procese su expediente.</div>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Procesado</th>
+                <th>Ficha</th>
+                <th>Paciente</th>
+                <th>Expediente</th>
+                <th>Consultorio</th>
+                <th>Hora</th>
+              </tr>
+            </thead>
+            <tbody id="archivista-rows"></tbody>
+          </table>
+        </div>
+        <div id="archivista-empty" class="empty-state" style="display:none;">Aún no hay fichas registradas hoy.</div>
+      </div>
+    </main>
+  </section>
+
+  <!-- ========================================== -->
+  <!-- VIEW: ENFERMERA (turnero)                   -->
+  <!-- ========================================== -->
+  <section id="view-enfermera" class="app-view">
+    <div class="turnero-wrap">
+      <div class="turnero-header">
+        <h1>Turnero</h1>
+        <p>Llamado de pacientes en tiempo real</p>
+      </div>
+
+      <div id="turnero-latest-wrap"></div>
+
+      <div id="turnero-history" class="turnero-history"></div>
+      <div id="turnero-empty" class="empty-state" style="display:none;">Aún no se ha llamado a ningún paciente.</div>
+    </div>
+  </section>
+
+  <!-- ========================================== -->
+  <!-- VIEW: CONSULTORIO (genérica, reusada por    -->
+  <!-- Consultorio 1/2/3/Dental según el link)     -->
+  <!-- ========================================== -->
+  <section id="view-consultorio" class="app-view">
+    <header class="topbar">
+      <div class="brand"><span class="dot"></span> Turnero Clínico</div>
+      <span id="consultorio-badge" class="view-badge">Consultorio</span>
+    </header>
+    <main class="page">
+      <div class="card">
+        <div class="card-title">Pacientes asignados</div>
+        <div class="card-subtitle">Presiona "Llamado" para anunciar al paciente en el turnero de Enfermería.</div>
+        <div id="consultorio-list" class="patient-list"></div>
+        <div id="consultorio-empty" class="empty-state" style="display:none;">No hay pacientes asignados por ahora.</div>
+      </div>
+    </main>
+  </section>
+
+  <!-- ========================================== -->
+  <!-- VIEW: ERROR DE LINK                         -->
+  <!-- ========================================== -->
+  <section id="view-link-error" class="app-view">
+    <div class="loading-screen">
+      <h1 style="font-size:1.3rem;">Link inválido</h1>
+      <p>Este link ya no está activo. Solicita uno nuevo al administrador.</p>
+    </div>
+  </section>
+
+  <!-- ========================================== -->
+  <!-- MODAL: confirmar "Iniciar jornada"          -->
+  <!-- ========================================== -->
+  <div id="modal-iniciar-jornada" class="modal-overlay">
+    <div class="modal-box">
+      <h2>¿Iniciar nueva jornada?</h2>
+      <p>Se eliminarán todos los registros de pacientes del día actual. Los links de las vistas no se ven afectados. Esta acción no se puede deshacer.</p>
+      <div class="modal-actions">
+        <button type="button" id="btn-cancelar-jornada" class="btn btn-secondary">Cancelar</button>
+        <button type="button" id="btn-confirmar-jornada" class="btn btn-danger">Sí, iniciar jornada</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="supabase-client.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

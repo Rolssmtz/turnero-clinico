@@ -1,0 +1,21 @@
+name: Supabase Keep-Alive
+
+on:
+  schedule:
+    - cron: '0 8 */3 * *'   # cada 3 días a las 08:00 UTC
+  workflow_dispatch:         # permite ejecutarlo manualmente desde GitHub
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase Auth health endpoint
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            "${{ secrets.SUPABASE_URL }}/auth/v1/health" \
+            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}")
+          echo "Respuesta HTTP: $STATUS"
+          if [ "$STATUS" -ge 400 ]; then
+            echo "::error::Supabase respondió $STATUS — revisa si el proyecto se pausó de nuevo."
+            exit 1
+          fi
