@@ -7,8 +7,8 @@
  * ═══════════════════════════════════════════════════════════
  */
 
-const SUPABASE_URL      = "https://TU_PROYECTO.supabase.co";
-const SUPABASE_ANON_KEY = "TU_ANON_KEY_PUBLICA_AQUI";
+const SUPABASE_URL      = "https://iwhgaxtgsyvutrbmarge.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_nyE1-2V0MrNnj4UZ1IilXw_79onkNOb";
 
 const SUPABASE_CONFIGURED = (
   SUPABASE_URL !== "https://TU_PROYECTO.supabase.co" &&
@@ -151,9 +151,11 @@ async function regenerateViewLink(viewType) {
 }
 
 async function crearFicha({ nombre_paciente, expediente, numero_ficha, consultorio }) {
-  const { data, error } = await _requireClient()
+  const client = _requireClient();
+  const { data: { user } } = await client.auth.getUser();
+  const { data, error } = await client
     .from('fichas')
-    .insert({ nombre_paciente, expediente, numero_ficha, consultorio })
+    .insert({ nombre_paciente, expediente, numero_ficha, consultorio, tenant_id: user.id })
     .select()
     .single();
   if (error) throw error;
