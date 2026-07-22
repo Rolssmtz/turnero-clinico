@@ -75,6 +75,50 @@ dejada abierta todo el día deja de recibir actualizaciones en silencio
 cuando el JWT anónimo rota (implementado en `keepRealtimeAuthFresh()` en
 `supabase-client.js`).
 
+## Enrutamiento: administrador vs. vistas públicas
+
+Contrato de enrutamiento (intencional, implementado en `boot()` en
+`app.js` — ver comentarios ahí):
+
+- **`/` es el único lugar de la app donde existen la vista de
+  login/registro (`view-access`) y la vista de administrador
+  (`view-admin`)**. Si hay una sesión de administrador válida (no
+  anónima), se muestra `view-admin`; si no, `view-access`.
+- **`/v/:token` siempre resuelve a su vista pública asignada**
+  (Archivista, Enfermera, o el Consultorio correspondiente) o, si el
+  token no es válido/está desactivado, a `view-link-error`. Esta ruta
+  **nunca** muestra `view-access` ni `view-admin`, sin importar si ese
+  mismo navegador tiene además una sesión de administrador activa en
+  `/` — son dos flujos de arranque completamente separados
+  (`bootstrapAdminApp()` vs. `bootstrapPublicView()`), cada uno con su
+  propio cliente de Supabase (ver sesión anónima aislada por pestaña,
+  abajo).
+- **La única forma de volver a ver el login/registro en `/` es que el
+  administrador cierre sesión explícitamente** (botón "Cerrar sesión"
+  → `adminSignOut()` → evento `SIGNED_OUT` → `showView('view-access')`).
+  No hay ningún otro camino (expiración de sesión, error de red, etc.)
+  que muestre login/registro desde una vista pública.
+
+### Sesión anónima aislada por pestaña
+
+El cliente de Supabase se crea de forma diferida vía
+`Turnero.initClient(mode)`, llamado una sola vez en `boot()` según la
+ruta:
+
+- `mode: 'admin'` (ruta `/`) → sesión persistida en `localStorage`
+  (sobrevive a reinicios del navegador; el admin no quiere loguearse
+  cada vez).
+- `mode: 'public'` (ruta `/v/:token`) → sesión persistida en
+  `sessionStorage`, **aislada por pestaña**. Se detectó en pruebas que,
+  con `localStorage` (compartido entre pestañas del mismo origen), abrir
+  varios links de vista en distintas pestañas del mismo navegador hacía
+  que todas terminaran compartiendo una sola sesión anónima — cada
+  `redeem_view_link` sobrescribía el mapeo tenant/vista de esa sesión
+  compartida, y la última pestaña en canjear un link determinaba lo que
+  veían TODAS (ej. la pestaña de Consultorio 1 llegó a mostrar fichas de
+  Consultorio Dental). `sessionStorage` resuelve esto porque cada pestaña
+  tiene su propio storage.
+
 ## Modelo de datos
 
 | Tabla | Propósito |
@@ -120,11 +164,34 @@ Ver el DDL completo y comentado en [`../supabase-schema.sql`](../supabase-schema
    cambia a verde. Esto es bookkeeping administrativo independiente del
    flujo de llamado (no bloquea que el consultorio siga llamando).
 
+## Notas de despliegue en Vercel (bugs reales encontrados y corregidos)
+
+Al probar el despliegue real se encontraron dos problemas de plataforma
+no evidentes en local, ambos ya corregidos en el código actual:
+
+1. **`cleanUrls: true` + rewrite catch-all rompe el ruteo.** Con
+   `cleanUrls` activo, Vercel devolvía 404 de plataforma para cualquier
+   ruta que no fuera la raíz exacta (nunca llegaba a `index.html`, ni
+   siquiera para rutas inventadas). Fix: `vercel.json` solo tiene
+   `rewrites`, sin `cleanUrls`/`trailingSlash`.
+2. **Rutas relativas de assets mal resueltas en subrutas.** Con el
+   rewrite ya funcionando, `index.html` se servía correctamente en
+   `/v/<token>`, pero `<script src="app.js">`/`<link href="styles.css">`
+   (rutas relativas) se resolvían contra `/v/<token>` en vez de la raíz
+   (pedían `/v/app.js`), y el propio rewrite catch-all también atrapaba
+   esas rutas mal formadas, devolviendo el HTML de `index.html` en vez
+   del JS/CSS real — la app se quedaba colgada en "Cargando…". Fix:
+   `<base href="/">` en el `<head>` de `index.html`.
+
+Ambos se detectaron probando con `curl`/DevTools contra la URL de
+producción real, no solo en local — recomendable repetir ese tipo de
+prueba tras cualquier cambio a `vercel.json` o a las rutas del `<head>`.
+
 ## Estructura de archivos
 
 ```
 turnero-clinico/
-├── index.html                  # las 8 <section id="view-*">
+├── index.html                  # las 7 <section id="view-*">
 ├── styles.css                  # design tokens + estilos de cada vista
 ├── supabase-client.js          # capa de adaptación a Supabase (auth, CRUD, realtime)
 ├── app.js                      # routing + lógica de UI de cada vista

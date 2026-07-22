@@ -68,6 +68,18 @@ function boot() {
     return;
   }
 
+  // Contrato de enrutamiento (intencional, no incidental):
+  // - "/" es el ÚNICO lugar donde existen las vistas de login/registro
+  //   (view-access) y de administrador (view-admin). bootstrapAdminApp()
+  //   nunca las muestra desde una ruta /v/:token, ni bootstrapPublicView()
+  //   las muestra desde "/".
+  // - "/v/:token" siempre resuelve a su vista pública asignada (o a
+  //   view-link-error si el token no es válido) y JAMÁS cae en
+  //   view-access/view-admin, sin importar si ese mismo navegador tiene
+  //   además una sesión de administrador activa en "/".
+  // - La única forma de volver a ver el login/registro en "/" es que el
+  //   administrador cierre sesión explícitamente (botón "Cerrar sesión"
+  //   → evento SIGNED_OUT en wireAccessForms/bootstrapAdminApp).
   const match = window.location.pathname.match(/^\/v\/([0-9a-f-]{36})\/?$/i);
   if (match) {
     T.initClient('public');
@@ -269,6 +281,8 @@ function shareLink(viewType, url) {
 
 // ══════════════════════════════════════════════
 //  FLUJO VISTAS PÚBLICAS (/v/:token)
+//  Nunca muestra view-access ni view-admin (ver contrato de
+//  enrutamiento en boot()) — cualquier fallo cae en view-link-error.
 // ══════════════════════════════════════════════
 
 async function bootstrapPublicView(token) {
