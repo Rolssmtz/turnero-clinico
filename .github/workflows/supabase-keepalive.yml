@@ -19,3 +19,4 @@ jobs:
             echo "::error::Supabase respondió $STATUS — revisa si el proyecto se pausó de nuevo."
             exit 1
           fi
+
