@@ -70,8 +70,10 @@ function boot() {
 
   const match = window.location.pathname.match(/^\/v\/([0-9a-f-]{36})\/?$/i);
   if (match) {
+    T.initClient('public');
     bootstrapPublicView(match[1]);
   } else {
+    T.initClient('admin');
     bootstrapAdminApp();
   }
 }

@@ -17,18 +17,38 @@ const SUPABASE_CONFIGURED = (
 
 let supabaseClient = null;
 
-if (SUPABASE_CONFIGURED && typeof window.supabase !== 'undefined') {
+/**
+ * Crea el cliente de Supabase. `mode` decide dónde persiste la sesión:
+ * - 'admin'  → localStorage (compartido entre pestañas, sobrevive a
+ *              reinicios del navegador — el admin quiere seguir logueado).
+ * - 'public' → sessionStorage (aislado POR PESTAÑA). Si un mismo
+ *              navegador abre dos links de vista distintos en dos
+ *              pestañas (ej. Archivista y Enfermera en la misma PC),
+ *              con localStorage compartirían la MISMA sesión anónima y
+ *              cada redeem_view_link sobrescribiría el mapeo tenant/vista
+ *              del otro — cada pestaña vería los datos de la última que
+ *              canjeó el link. sessionStorage evita esa contaminación
+ *              cruzada porque cada pestaña tiene su propio storage.
+ * Debe llamarse una sola vez, antes de cualquier otra función.
+ */
+function initClient(mode) {
+  if (supabaseClient) return supabaseClient;
+  if (!SUPABASE_CONFIGURED || typeof window.supabase === 'undefined') {
+    console.error('[Turnero] ⚠️ Supabase no configurado — edita supabase-client.js con tu URL y anon key.');
+    return null;
+  }
+
   supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     auth: {
       autoRefreshToken: true,
       persistSession: true,
       detectSessionInUrl: false,
-      storageKey: 'turnero-auth-token'
+      storageKey: 'turnero-auth-token',
+      storage: mode === 'public' ? window.sessionStorage : window.localStorage
     }
   });
-  console.log('[Turnero] ✅ Supabase client inicializado');
-} else if (!SUPABASE_CONFIGURED) {
-  console.error('[Turnero] ⚠️ Supabase no configurado — edita supabase-client.js con tu URL y anon key.');
+  console.log(`[Turnero] ✅ Supabase client inicializado (modo: ${mode})`);
+  return supabaseClient;
 }
 
 // Mapa de view_type <-> etiqueta legible, usado por toda la app.
@@ -220,6 +240,7 @@ function subscribeTabla(tabla, callback) {
 
 window.Turnero = {
   SUPABASE_CONFIGURED,
+  initClient,
   VIEW_LABELS,
   ADMIN_VIEW_ORDER,
   CONSULTORIO_TYPES,
