@@ -82,6 +82,13 @@ hace ping cada 3 días. En el repo de GitHub, define los secrets:
 - `SUPABASE_URL`
 - `SUPABASE_ANON_KEY`
 
+**Nota de troubleshooting:** en el primer push a un repo recién creado, a
+veces GitHub no indexa el workflow (no aparece en la pestaña Actions ni
+vía `gh workflow list`) por un fallo puntual de su lado. Si eso pasa,
+basta con hacer un commit trivial que modifique ese mismo archivo (ej.
+agregar una línea en blanco) y volver a hacer push — eso fuerza a
+GitHub a re-indexarlo.
+
 ## 7. Uso diario
 
 1. El administrador inicia sesión (o crea su cuenta la primera vez).
