@@ -192,20 +192,6 @@ function wireAdminDashboard() {
     }
   });
 
-  document.getElementById('btn-almacenar-jornada').addEventListener('click', async (e) => {
-    const email = document.getElementById('jornada-email').value.trim();
-    if (!email) { toast('Escribe un correo electrónico destino.', 'error'); return; }
-    e.target.disabled = true;
-    try {
-      await T.enviarJornadaCsv(email);
-      toast(`Jornada enviada a ${email}.`, 'success');
-    } catch (err) {
-      toast(friendlyError(err), 'error');
-    } finally {
-      e.target.disabled = false;
-    }
-  });
-
   document.getElementById('btn-iniciar-jornada').addEventListener('click', () => openModal('modal-iniciar-jornada'));
   document.getElementById('btn-cancelar-jornada').addEventListener('click', () => closeModal('modal-iniciar-jornada'));
   document.getElementById('btn-confirmar-jornada').addEventListener('click', async (e) => {

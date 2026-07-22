@@ -3,9 +3,9 @@
 ## Resumen
 
 SPA vanilla (HTML/CSS/JS, sin bundler) + Supabase (Postgres + Auth +
-Realtime + Edge Functions), desplegada en Vercel. Multi-tenant: cada
-administrador que se registra es un "tenant" con sus datos 100% aislados,
-sobre un único proyecto Supabase gratuito compartido.
+Realtime), desplegada en Vercel. Multi-tenant: cada administrador que se
+registra es un "tenant" con sus datos 100% aislados, sobre un único
+proyecto Supabase gratuito compartido.
 
 ## El problema central: vistas públicas, aisladas y en tiempo real
 
@@ -132,7 +132,5 @@ turnero-clinico/
 ├── vercel.json                 # rewrite catch-all → index.html (SPA sin bundler)
 ├── package.json                # sin bundler, scripts de vercel dev/deploy
 ├── .github/workflows/          # keep-alive de Supabase
-├── supabase/functions/
-│   └── send-jornada-csv/       # Edge Function: CSV de la jornada por correo (Resend)
 └── docs/                       # este documento + guía de instalación
 ```

@@ -167,14 +167,6 @@ async function iniciarJornada() {
   if (error) throw error;
 }
 
-async function enviarJornadaCsv(toEmail) {
-  const { data, error } = await _requireClient().functions.invoke('send-jornada-csv', {
-    body: { to_email: toEmail }
-  });
-  if (error) throw error;
-  return data;
-}
-
 // ══════════════════════════════════════════════════════════
 //  DATOS COMPARTIDOS (fichas / llamados) — RLS filtra las filas
 //  visibles según la sesión (admin o vista pública canjeada).
@@ -247,7 +239,6 @@ window.Turnero = {
   regenerateViewLink,
   crearFicha,
   iniciarJornada,
-  enviarJornadaCsv,
 
   listFichas,
   marcarProcesado,
