@@ -236,13 +236,17 @@ a { color: var(--accent); }
    VIEW-ACCESS (login / registro admin)
    ══════════════════════════════════════════════ */
 
-#view-access {
+/* OJO: el display debe ir SOLO en la variante .active. Un selector por
+   ID (#view-access) tiene más especificidad que uno por clase
+   (.app-view { display:none }), así que una regla #view-access sin
+   .active gana SIEMPRE y deja el login visible todo el tiempo, sin
+   importar la clase "active" — bug real ya corregido una vez. */
+#view-access.active {
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 24px;
 }
-#view-access.active { display: flex; }
 
 .access-card { width: 100%; max-width: 420px; }
 

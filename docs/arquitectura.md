@@ -119,6 +119,44 @@ ruta:
   Consultorio Dental). `sessionStorage` resuelve esto porque cada pestaña
   tiene su propio storage.
 
+### Bug real: el login quedaba visible encima de cualquier vista
+
+El contrato de arriba (`showView()` alterna la clase `.active`) ya
+estaba bien implementado en JS, pero en `styles.css` la vista de acceso
+tenía una regla **por ID sin condicionar a `.active`**:
+
+```css
+/* ANTES — bug */
+#view-access { display: flex; ... }       /* siempre visible */
+#view-access.active { display: flex; }    /* redundante */
+```
+
+Un selector por ID (`#view-access`, especificidad 100) le gana **siempre**
+a uno por clase (`.app-view { display: none; }`, especificidad 10) sin
+importar el orden en el archivo — así que el login se renderizaba
+permanentemente, apilado arriba de `view-admin` o de la vista pública
+que tocara (visible haciendo scroll). El resto de las vistas no tenía
+este problema porque ninguna otra tiene una regla CSS por ID propia.
+
+Fix: mover TODO el `display`/layout a la variante `.active` únicamente:
+
+```css
+/* DESPUÉS — corregido */
+#view-access.active {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+```
+
+**Lección de verificación** (por qué no se detectó antes): comprobar
+`document.querySelector('.app-view.active')?.id` solo confirma qué
+elemento tiene la clase — no si de verdad es el único visible. La
+verificación correcta es leer `getComputedStyle(el).display` (o
+`el.offsetHeight`) de **todas** las `.app-view`, no solo preguntar cuál
+tiene la clase `active`.
+
 ## Modelo de datos
 
 | Tabla | Propósito |
